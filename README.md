@@ -1,4 +1,4 @@
-# edgeware-node - Luke's version to run a validator using Linode
+# straightedge-node - Luke's version to run a validator using Linode
 
 Note: I have removed parts of the original Readme and only left the parts that I need.
 If you're a visitor to this repo, please refer to the original repo too first so you're not missing out on anything important.
@@ -14,7 +14,7 @@ If you're a visitor to this repo, please refer to the original repo too first so
 ### Reminder about security for validators
 * Note: For Mainnet, setup additional safeguards such as cloud HSM that cost ~USD$5k upfront and ~USD$1.5k per month when significant amount to protect on keys (to avoid handing in keys and having DDOS protection)
 
-### Setup account and get testnet EDG
+### Setup account and get testnet STR
 
 * Run `./scripts/keygen.sh` to generate an account address to be used on the testnet.
 You'll need to use that private session key with the `--key` (in the Dockerfile) to run a node and possibly be chosen as a validator through the on-chain bonding system (depends on how much is bonded and nominated to your address). See how you can run an RPC call below too.
@@ -69,13 +69,13 @@ Thread '<unnamed>' panicked at 'Due to validation `initial` and `maximum` should
 
 ### Close repo to Host Machine
 
-* Clone https://github.com/ltfschoen/edgeware-node
+* Clone https://github.com/ltfschoen/straightedge-node
   ```
-  git clone git@github.com:ltfschoen/edgeware-node.git
+  git clone git@github.com:ltfschoen/straightedge-node.git
   ```
 * Change to cloned directory
   ```
-  cd ~/code/src/ltfschoen/edgeware-node
+  cd ~/code/src/ltfschoen/straightedge-node
   ```
 
 ### Copy directory from Host Machine to Linode Instance
@@ -94,7 +94,7 @@ ssh root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_SUBSTRATE> 'bash -s' < ./scripts/set
 
   * Note: Instead of using `rsync` after the initial rsync, retrieve latest changes from within the VPS as soon as you SSH into it in the next step as follows:
     ```
-    cd edgeware-node; 
+    cd straightedge-node; 
     git checkout master;
     git pull --rebase upstream master;
     git checkout luke-validator;
@@ -104,13 +104,13 @@ ssh root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_SUBSTRATE> 'bash -s' < ./scripts/set
     ```
   * Note: If Edgeware upstream repo has changed, then delete all the Docker containers in the next step before creating them again as follows:
     ```
-    cd edgeware-node/scripts;
+    cd straightedge-node/scripts;
     bash docker-destroy.sh;
     cd ..
     ```
 
 ```
-rsync -az --verbose --progress --stats ~/code/src/ltfschoen/edgeware-node root@<IP_ADDRESS>:/root;
+rsync -az --verbose --progress --stats ~/code/src/ltfschoen/straightedge-node root@<IP_ADDRESS>:/root;
 ```
 
 ### SSH Auth into to the Linode Instance
@@ -131,7 +131,7 @@ ssh root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_EDGEWARE>
 apt-get update; apt-get install screen -y;
 screen -S root;
 
-cd edgeware-node; docker-compose up --force-recreate --build -d;
+cd straightedge-node; docker-compose up --force-recreate --build -d;
 ```
 
 Note:
@@ -164,14 +164,14 @@ Switch out of screen with CTRL+A+D
 ```
 cd /usr/local/bin;
 
-edgeware --base-path "/root/edgeware" \
-  --chain "edgeware" \
-  --keystore-path "/root/edgeware/keys" \
+straightedge --base-path "/root/straightedge" \
+  --chain "straightedge" \
+  --keystore-path "/root/straightedge/keys" \
   --name "Luke MXC 🔥🔥🔥" \
-  --port 30333 \
-  --rpc-port 9933 \
+  --port 30355 \
+  --rpc-port 9955 \
   --telemetry-url ws://telemetry.polkadot.io:1024 \
-  --ws-port 9944
+  --ws-port 9966
 ```
 
 ### Validator Setup
@@ -245,7 +245,7 @@ $ node
 80609.06227448891
 ```
 
-Note: Connect to remote node with ` -r ws://mainnet1.edgewa.re:9944`
+Note: Connect to remote node with ` -r ws://mainnet1.edgewa.re:9966`
 
 ```
 ~/edgeware-cli/bin/edge session validators
@@ -322,17 +322,17 @@ Events:
 * Note: you can't use `rotateKeys` instead of manually generating 3x session keys as mentioned in the guide. someone used `rotateKeys` first and had the slashing issue, but then I created each session key separately, added them to node's keystore, and now my validator seems to work properly.
   * `rotateKeys` gives you one long string which you have to split into 3 keys and then add 0x at the start
 
-If Edgware node is already running and synced to latest block but you can't access the screen with `screen -r`, then run `ps -a`, and kill the process ID (PID) with name `edgeware` process with `kill -9 <PID>` so you can restart it again but with the validator flag `--validator` 
+If Edgware node is already running and synced to latest block but you can't access the screen with `screen -r`, then run `ps -a`, and kill the process ID (PID) with name `straightedge` process with `kill -9 <PID>` so you can restart it again but with the validator flag `--validator` 
 
 ### Run Validator
 
 * Must use `--no-telemetry` otherwise it kills itself
-* Rename below for Mainnet (edgeware) OR Testnet (edgeware-test)
+* Rename below for Mainnet (straightedge) OR Testnet (straightedge-test)
 ```
-edgeware --validator \
-  --base-path "/root/edgeware" \
-  --chain "edgeware" \
-  --keystore-path "/root/edgeware/keys" \
+straightedge --validator \
+  --base-path "/root/straightedge" \
+  --chain "straightedge" \
+  --keystore-path "/root/straightedge/keys" \
   --no-telemetry
 ```
 
@@ -343,14 +343,14 @@ Note that you need to access the Docker Container again to do this with the foll
 ```
 docker exec -it $(docker ps -q) bash;
 
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["aura", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["gran", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["imon", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
+curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["aura", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9955
+curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["gran", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9955
+curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["imon", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9955
 ```
 The output from each curl request should be: `{"jsonrpc":"2.0","result":"0x...","id":1}`.
 If the "result" value is `null` then may not have worked, but check the following first: Another way to check (thanks [HashQuark] ZLH), is to go to the following folder, and check that there are 3x files/keys:
-* ~/.local/share/edgeware/chains/edgeware/keystore OR
-* /root/edgeware/keys
+* ~/.local/share/straightedge/chains/straightedge/keystore OR
+* /root/straightedge/keys
 
 And you can also check it on https://polkadot.js.org/apps/#/staking/actions
 
@@ -379,7 +379,7 @@ Note: If you setup a password with `subkey`, then create a keystore password fil
 
 * Check disk spaced used by chain
 ```
-du -hs /root/edgeware-node
+du -hs /root/straightedge-node
 ```
 * Note: New validators are entered every 10 blocks. See them here - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/session/session. Initially the only validators listed appeared to be Edgeware-owned because they were auto-bonded. there's no staking/bond transactions associated with them, as one that was bonded did the set keys/validate setting transactions in the reverse order of the documentation (i.e. https://polkascan.io/pre/edgeware-testnet/account/5G9UbiviqfuShqjmVqFAUr4BAxWk8KZh4ho9RW2ZoE1rZZnE). All of the validators have "validatorPayment": 0, which is based on the amount you choose to give to nominators. Validator's cannot be auto-bonded unless it's sure they're online at genesis or else the network stalls
 * Check the bond shows up on Polkascan
@@ -448,7 +448,7 @@ docker exec -it $(docker ps -q) bash;
 
 View Disk Usage of Substrate chain DB
 ```
-du -hs /root/edgeware/chains/edgeware_testnet/db
+du -hs /root/straightedge/chains/straightedge/db
 ```
 
 ### Share Chain Database
@@ -456,11 +456,11 @@ du -hs /root/edgeware/chains/edgeware_testnet/db
 * Zip latest chain (i.e. if user on MacOS wants to share latest chain, just zip it)
 
 ```
-tar -cvzf 2019-08-01-db-edgeware.tar.gz "/Users/Ls/Library/Application Support/Edgeware/chains/edgeware/db"
+tar -cvzf 2019-08-01-db-straightedge.tar.gz "/Users/Ls/Library/Application Support/Straightedge/chains/straightedge/db"
 ```
 
 ```
-tar -cvzf 2019-09-09-db-edgeware.tar.gz "~/edgeware/chains/edgeware_testnet/db"
+tar -cvzf 2019-09-09-db-straightedge.tar.gz "~/straightedge/chains/straightedge/db"
 ```
 
 * Share zip file with your friend
@@ -468,33 +468,33 @@ tar -cvzf 2019-09-09-db-edgeware.tar.gz "~/edgeware/chains/edgeware_testnet/db"
 * Copy latest chain to Linode
 
 ```
-rsync -avz "/Users/Ls/Library/Application Support/Edgeware/chains/edgeware/db/2019-08-01-db-edgeware.tar.gz" root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_SUBSTRATE_OR_POLKADOT>:/root/edgeware
+rsync -avz "/Users/Ls/Library/Application Support/Straightedge/chains/straightedge/db/2019-08-01-db-straightedge.tar.gz" root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_SUBSTRATE_OR_POLKADOT>:/root/straightedge
 ```
 
 ### Show System Information of Linode Instance
 
 ```
-cd /root/edgeware-node/scripts;
+cd /root/straightedge-node/scripts;
 bash system-info.sh
 ```
 
 ### Show Docker Information of Linode Instance
 
 ```
-cd /root/edgeware-node/scripts;
+cd /root/straightedge-node/scripts;
 bash docker-info.sh
 ```
 
 ### Destroy all Docker Images and Containers on the Linode Instance
 
 ```
-cd /root/edgeware-node/scripts;
+cd /root/straightedge-node/scripts;
 bash docker-destroy.sh
 ```
 
 ### Creation of Additional Nodes
 
-Creation of additional Edgeware Nodes should use a different `--base-path`, have a different name, run on a different port `--port` (i.e. initial node `30333`, second node `30334`, etc), and the `--bootnodes` should include details of other initial nodes shown in Bash Terminal (i.e. `--bootnodes 'enode://QmPLDpxxhYL7dBiaHH26YqzXjLaaADoa4ShJSDnufgPpm1@127.0.0.1:30333'`)
+Creation of additional Straightedge Nodes should use a different `--base-path`, have a different name, run on a different port `--port` (i.e. initial node `30355`, second node `30356`, etc), and the `--bootnodes` should include details of other initial nodes shown in Bash Terminal (i.e. `--bootnodes 'enode://QmPLDpxxhYL7dBiaHH26YqzXjLaaADoa4ShJSDnufgPpm1@127.0.0.1:30355'`)
 
 ## Setup Nominator
 
@@ -512,13 +512,13 @@ If your keys are encrypted or should be encrypted by the keystore, you need to p
 ### Recommended RPC call
 For most users who want to run a validator node, the author_rotateKeys RPC call is sufficient. The RPC call will generate N Session keys for you and return their public keys. N is the number of session keys configured in the runtime. The output of the RPC call can be used as input for the session::set_keys transaction.
 ```
-curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_rotateKeys", "id":1 }' localhost:9933
+curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_rotateKeys", "id":1 }' localhost:9955
 ```
 
 ### Advanced RPC call
 If the Session keys need to match a fixed seed, they can be set individually key by key. The RPC call expects the key seed and the key type. The key types supported by default in Edgeware are `aura`, `gran`, and `imon`.
 ```
-curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["KEY_TYPE", "SEED", "PUBLIC_KEY"],"id":1 }' localhost:9933
+curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["KEY_TYPE", "SEED", "PUBLIC_KEY"],"id":1 }' localhost:9955
 ```
 `KEY_TYPE` - needs to be replaced with the 4-character key type identifier. `SEED` - is the seed of the key.
 
@@ -613,8 +613,8 @@ The combination of the slashing being based on the bonded stake (5% or 10% of to
 
 * What do to after being slashed?
 
-Install latest edgeware-node
-Install latest edgeware-cli
+Install latest straightedge-node
+Install latest straightedge-cli
 Purge chain if necessary
 Create and insert new session keys into node
 Purge chain db before re-running
