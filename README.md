@@ -62,6 +62,9 @@ Filename				Type		Size	Used	Priority
 /dev/sdb                                partition	17301500	0	-2
 ```
 
+Note: Tried increasing to 8 GB Swap with Linode 2 GB Plan => 50688 - 8192 = 42496
+
+
 If you get the following error, it may have been due to incorrect swap size, but i'm not sure. This error triggered me to increase swap size:
 ```
 Thread '<unnamed>' panicked at 'Due to validation `initial` and `maximum` should be valid: Memory("mmap returned an error")', src/libcore/result.rs:999
@@ -90,7 +93,7 @@ ssh root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_EDGEWARE> "sh -c 'nohup apt install 
 ssh root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_SUBSTRATE> 'bash -s' < ./scripts/setup-docker.sh;
 ```
 
-* Copy the cloned Edgeware directory to the Linode instance
+* Copy the cloned Straightedge directory to the Linode instance
 
   * Note: Instead of using `rsync` after the initial rsync, retrieve latest changes from within the VPS as soon as you SSH into it in the next step as follows:
     ```
@@ -110,6 +113,7 @@ ssh root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_SUBSTRATE> 'bash -s' < ./scripts/set
     ```
 
 ```
+git fetch origin luke-validator:luke-validator;
 rsync -az --verbose --progress --stats ~/code/src/ltfschoen/straightedge-node root@<IP_ADDRESS>:/root;
 ```
 
@@ -129,7 +133,7 @@ ssh root@<INSERT_IP_ADDRESS_LINODE_INSTANCE_EDGEWARE>
 
 ```
 apt-get update; apt-get install screen -y;
-screen -S root;
+screen -S straightedge;
 
 cd straightedge-node; docker-compose up --force-recreate --build -d;
 ```
@@ -163,15 +167,16 @@ Switch out of screen with CTRL+A+D
 
 ```
 cd /usr/local/bin;
+cd straightedge;
 
-straightedge --base-path "/root/straightedge" \
+./straightedge --base-path "/root/straightedge" \
   --chain "straightedge" \
   --keystore-path "/root/straightedge/keys" \
   --name "Luke MXC 🔥🔥🔥" \
-  --port 30355 \
-  --rpc-port 9955 \
+  --port 30333 \
+  --rpc-port 9933 \
   --telemetry-url ws://telemetry.polkadot.io:1024 \
-  --ws-port 9966
+  --ws-port 9944
 ```
 
 ### Validator Setup
@@ -343,9 +348,9 @@ Note that you need to access the Docker Container again to do this with the foll
 ```
 docker exec -it $(docker ps -q) bash;
 
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["aura", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9955
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["gran", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9955
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["imon", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9955
+curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["aura", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
+curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["gran", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
+curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["imon", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
 ```
 The output from each curl request should be: `{"jsonrpc":"2.0","result":"0x...","id":1}`.
 If the "result" value is `null` then may not have worked, but check the following first: Another way to check (thanks [HashQuark] ZLH), is to go to the following folder, and check that there are 3x files/keys:
@@ -494,7 +499,7 @@ bash docker-destroy.sh
 
 ### Creation of Additional Nodes
 
-Creation of additional Straightedge Nodes should use a different `--base-path`, have a different name, run on a different port `--port` (i.e. initial node `30355`, second node `30356`, etc), and the `--bootnodes` should include details of other initial nodes shown in Bash Terminal (i.e. `--bootnodes 'enode://QmPLDpxxhYL7dBiaHH26YqzXjLaaADoa4ShJSDnufgPpm1@127.0.0.1:30355'`)
+Creation of additional Straightedge Nodes should use a different `--base-path`, have a different name, run on a different port `--port` (i.e. initial node `30333`, second node `30334`, etc), and the `--bootnodes` should include details of other initial nodes shown in Bash Terminal (i.e. `--bootnodes 'enode://QmPLDpxxhYL7dBiaHH26YqzXjLaaADoa4ShJSDnufgPpm1@127.0.0.1:30333'`)
 
 ## Setup Nominator
 
@@ -512,13 +517,13 @@ If your keys are encrypted or should be encrypted by the keystore, you need to p
 ### Recommended RPC call
 For most users who want to run a validator node, the author_rotateKeys RPC call is sufficient. The RPC call will generate N Session keys for you and return their public keys. N is the number of session keys configured in the runtime. The output of the RPC call can be used as input for the session::set_keys transaction.
 ```
-curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_rotateKeys", "id":1 }' localhost:9955
+curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_rotateKeys", "id":1 }' localhost:9933
 ```
 
 ### Advanced RPC call
 If the Session keys need to match a fixed seed, they can be set individually key by key. The RPC call expects the key seed and the key type. The key types supported by default in Edgeware are `aura`, `gran`, and `imon`.
 ```
-curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["KEY_TYPE", "SEED", "PUBLIC_KEY"],"id":1 }' localhost:9955
+curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["KEY_TYPE", "SEED", "PUBLIC_KEY"],"id":1 }' localhost:9933
 ```
 `KEY_TYPE` - needs to be replaced with the 4-character key type identifier. `SEED` - is the seed of the key.
 

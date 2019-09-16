@@ -24,22 +24,33 @@ LABEL maintainer="hello@commonwealth.im"
 LABEL description="This is the 2nd stage: a very small image where we copy the Straightedge binary."
 ENV DEBIAN_FRONTEND noninteractive
 ARG PROFILE=release
-COPY --from=builder /straightedge/target/$PROFILE/straightedge /usr/local/bin
-COPY --from=builder /straightedge/mainnet /usr/local/bin/mainnet
-COPY --from=builder /straightedge/testnets /usr/local/bin/testnets
+RUN mkdir -p /usr/local/bin/straightedge
+COPY --from=builder /straightedge/target/$PROFILE/straightedge /usr/local/bin/straightedge/straightedge
+COPY --from=builder /straightedge/mainnet /usr/local/bin/straightedge/mainnet
 # latest Node.js 12.x https://github.com/nodesource/distributions#installation-instructions
 RUN rm -rf /usr/lib/python* && \
 	mkdir -p /root/.local/share && \
 	ln -s /root/.local/share /data \
 	cd /usr/local/bin && \
 	apt-get update && \
-	apt-get install -y cmake && \
-	DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends apt-utils && \
+	apt-get install -y git cmake && \
+	apt-get install -y --no-install-recommends apt-utils && \
 	apt-get install -y curl screen && \
 	curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-	apt-get install -y nodejs npm
+	apt-get install -y nodejs
+RUN cd /root && \
+	apt remove yarn && \
+	# don't use ssh otherwise you need github host keys
+	git clone https://github.com/hicommonwealth/edgeware-cli && \
+	cd edgeware-cli && \
+	curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+	echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
+	apt update && \
+	apt install -y yarn && \
+	yarn && \
+	yarn run build
 
-EXPOSE 30355 30366 9955 9966
+EXPOSE 30333 30334 9933 9944
 VOLUME ["/data"]
 
 WORKDIR /usr/local/bin
