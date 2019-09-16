@@ -38,17 +38,6 @@ RUN rm -rf /usr/lib/python* && \
 	apt-get install -y curl screen && \
 	curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
 	apt-get install -y nodejs
-RUN cd /root && \
-	apt remove yarn && \
-	# don't use ssh otherwise you need github host keys
-	git clone https://github.com/hicommonwealth/edgeware-cli && \
-	cd edgeware-cli && \
-	curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
-	echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
-	apt update && \
-	apt install -y yarn && \
-	yarn && \
-	yarn run build
 
 EXPOSE 30333 30334 9933 9944
 VOLUME ["/data"]

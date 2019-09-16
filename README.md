@@ -214,59 +214,60 @@ apt update && \
 apt-get install -y git cmake
 ```
 
-Generate Github keypairs. Copy the output of `cat id_rsa.pub`, and create a new SSH Key at https://github.com/settings/keys, and paste it there. (see https://stackoverflow.com/a/2643584/3208553)
-```
-cd ~/.ssh && ssh-keygen && \
-cat id_rsa.pub
-```
-
 ```
 cd ~ && \
-git clone git@github.com:hicommonwealth/edgeware-cli.git && \
-cd edgeware-cli
+git clone https://github.com/heystraightedge/straightedge-cli && \
+cd straightedge-cli
 ```
 
 Install Yarn v1.17.3 (NOT v0.27.0). See https://github.com/yarnpkg/yarn/issues/2821#issuecomment-284181365
+Install dependencies for straightedge-cli
 
 ```
+apt remove yarn && \
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
+apt update && \
 apt install -y yarn && \
-yarn --version
-```
-
-Install dependencies for edgeware-cli
-```
+yarn --version && \
 yarn && \
 yarn run build
 ```
+
+Request STR tokens to be sent to your Controller account to cover transaction fees, and split some into your Stash account to use for bonding as a validator.
 
 Check the list of validators, your account balance:
 Note: freeBalance returns a 32-bit hex string. Since the EDG token is 18-decimal places,
 calculate EDG value using Node.js console:
 ```
 $ node
-> parseInt("0x000000000001111d3762d881c9a13fb", 16) / 1000000000000000000;
+> parseInt("0x00000000000000000de0b6b3a7640000", 16) / 1000000000000000000;
 80609.06227448891
 ```
 
-Note: Connect to remote node with ` -r ws://mainnet1.edgewa.re:9966`
+Note: Connect to remote node with ` -r ws://mainnet1.straighted.ge:9944`
 
 ```
-~/edgeware-cli/bin/edge session validators
-~/edgeware-cli/bin/edge balances freeBalance <ACCOUNT_PUBLIC_KEY_SS58>
-~/edgeware-cli/bin/edge -s <STASH_SEED> staking bond <CONTROLLER_PUBLIC_KEY_HEX> <AMOUNT> <REWARD_DESTINATION>
-~/edgeware-cli/bin/edge -s "some words here some words here"//Stash staking bond 0x... 1000000000000000000 stash
+ws://mainnet1.straighted.ge:9944
+ws://mainnet2.straighted.ge:9944
+ws://mainnet3.straighted.ge:9944
+```
+
+```
+/straightedge-cli/bin/str session validators
+/straightedge-cli/bin/str balances freeBalance <ACCOUNT_PUBLIC_KEY_SS58>
+/straightedge-cli/bin/str -s <STASH_SEED> staking bond <CONTROLLER_PUBLIC_KEY_HEX> <AMOUNT> <REWARD_DESTINATION>
+/straightedge-cli/bin/str -s "some words here some words here"//Stash staking bond 0x... 1000000000000000000 stash
 ```
 
 Note: 1000000000000000000 is equivalent to 1 testEDG (testnet EDG token)
 Note: Later you can Bond Extra with. See https://github.com/paritytech/substrate/blob/master/srml/staking/src/lib.rs#L744:
   ```
-  ~/edgeware-cli/bin/edge -s <STASH_SEED> staking bondExtra <AMOUNT>
+  /straightedge-cli/bin/str -s <STASH_SEED> staking bondExtra <AMOUNT>
   ```
 Note: If you're getting slashed hard, and can't figure out why, try chilling:
   ```
-  ~/edgeware-cli/bin/edge -s <CONTROLLER_SEED>//Controller staking chill
+  /straightedge-cli/bin/str -s <CONTROLLER_SEED>//Controller staking chill
   ```
 Note: Be sure to check case when entering <STASH_SEED> (i.e. //Stash or //stash)
 Note: You can recover key information with `subkey inspect...`
@@ -285,8 +286,8 @@ Note: You need to set a controller for bonding tokens on-chain
 Note: In lockdrop there was only one "hot" session key called "authority", but now there are three "hot" session keys that you need to be a validator "aura", "grandpa", and "imonline", so you need to generate them.
 
 ```
-~/edgeware-cli/bin/edge -r edgeware -s <CONTROLLER_SEED> staking validate <UNSTAKE_THRESHOLD> <VALIDATOR_PAYMENT>
-~/edgeware-cli/bin/edge -r edgeware -s <CONTROLLER_SEED> staking validate 3 0
+/straightedge-cli/bin/str -s <CONTROLLER_SEED> staking validate <UNSTAKE_THRESHOLD> <VALIDATOR_PAYMENT>
+/straightedge-cli/bin/str -s <CONTROLLER_SEED> staking validate 3 0
 ```
 Note: If it worked it should output:
 ```
@@ -299,12 +300,16 @@ Events:
 	 {"ApplyExtrinsic":2} : system.ExtrinsicSuccess []
 ```
 
-Note: If you get error `Failed:  Error: submitAndWatchExtrinsic (extrinsic: Extrinsic): ExtrinsicStatus:: 1010: Invalid Transaction (Payment)` when you run `session setKeys` below, then it's because you have insufficient funds in your Controller account (i.e. 0.07 EDG is ok, buy 0.02 EDG is insufficient!)
-SOLUTION: Use your Stash as your Controller too! (this is stupid and risky since we're exposing cold wallet so its warm, but since we can't transfer so we have more funds to cover transaction fees we don't have any choice but to shoot ourselves in the feet security-wise - i'm with stupid)
+Note: If you get error `Failed:  Error: submitAndWatchExtrinsic (extrinsic: Extrinsic): ExtrinsicStatus:: 1010: Invalid Transaction (Payment)` when you run a request, then it's because you have insufficient funds in the calling account to cover the tx fee:
+`balances transfer` tx fee: 0.034800000827701 (deducted from Controller)
+`staking bond` tx fee: 0.024900000413336 (deducted from Stash)
+`staking validate` tx fee: 0.020700000619793 (deducted from Controller)
+`session setKeys` tx fee: 0.030300000123608 (deducted from Controller)
 
+So you need at least 0.110700001984438 to cover transaction fees.
 ```
-~/edgeware-cli/bin/edge -r edgeware -s <CONTROLLER_SEED> session setKeys <SESSION_PUBLIC_KEY1>,<SESSION_PUBLIC_KEY2>,<SESSION_PUBLIC_KEY3>
-~/edgeware-cli/bin/edge -r edgeware -s "..."//Controller session setKeys <SESSION_PUBLIC_KEY1>,<SESSION_PUBLIC_KEY2>,<SESSION_PUBLIC_KEY3>
+/straightedge-cli/bin/str -s <CONTROLLER_SEED> session setKeys <SESSION_PUBLIC_KEY1>,<SESSION_PUBLIC_KEY2>,<SESSION_PUBLIC_KEY3>
+/straightedge-cli/bin/str -s "..."//Controller session setKeys <SESSION_PUBLIC_KEY1>,<SESSION_PUBLIC_KEY2>,<SESSION_PUBLIC_KEY3>
 ```
 Note: If it works it should output the associated addresses of your aura, gran, and imon session keys (hot keys) as follows:
 ```
@@ -334,11 +339,11 @@ If Edgware node is already running and synced to latest block but you can't acce
 * Must use `--no-telemetry` otherwise it kills itself
 * Rename below for Mainnet (straightedge) OR Testnet (straightedge-test)
 ```
-straightedge --validator \
+./straightedge --validator \
   --base-path "/root/straightedge" \
   --chain "straightedge" \
   --keystore-path "/root/straightedge/keys" \
-  --no-telemetry
+  --name "Luke MXC 🔥🔥🔥"
 ```
 
 Wait until synced to latest block, then exit to different screen with CTRL+A+D, and set the session keys
@@ -348,9 +353,9 @@ Note that you need to access the Docker Container again to do this with the foll
 ```
 docker exec -it $(docker ps -q) bash;
 
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["aura", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["gran", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
-curl -vH 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["imon", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
+curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["aura", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
+curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["gran", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
+curl -H 'Content-Type: application/json' --data '{ "jsonrpc":"2.0", "method":"author_insertKey", "params":["imon", "<mnemonic>//<derivation_path>", "<public_key>"],"id":1 }' localhost:9933
 ```
 The output from each curl request should be: `{"jsonrpc":"2.0","result":"0x...","id":1}`.
 If the "result" value is `null` then may not have worked, but check the following first: Another way to check (thanks [HashQuark] ZLH), is to go to the following folder, and check that there are 3x files/keys:
@@ -379,23 +384,23 @@ Note: If you setup a password with `subkey`, then create a keystore password fil
 ### Check Validator Status
 
 
-* Check you're validator node is healthy and sending online ping events to the network each session to prevent slashing at - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/event, then for the recent sessions imonline heartbeat events. Check to see if one of them shows your "imon" session key's public key. You first need to be bonded, and a validator in the current session, otherwise your node is just passive.
+* Check you're validator node is healthy and sending online ping events to the network each session to prevent slashing at - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/straightedge/event, then for the recent sessions imonline heartbeat events. Check to see if one of them shows your "imon" session key's public key. You first need to be bonded, and a validator in the current session, otherwise your node is just passive.
   * Alternatively, uou could just send a transaction, and even if it fails, you know you're connected if it shows as a failed tx.
 
 * Check disk spaced used by chain
 ```
 du -hs /root/straightedge-node
 ```
-* Note: New validators are entered every 10 blocks. See them here - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/session/session. Initially the only validators listed appeared to be Edgeware-owned because they were auto-bonded. there's no staking/bond transactions associated with them, as one that was bonded did the set keys/validate setting transactions in the reverse order of the documentation (i.e. https://polkascan.io/pre/edgeware-testnet/account/5G9UbiviqfuShqjmVqFAUr4BAxWk8KZh4ho9RW2ZoE1rZZnE). All of the validators have "validatorPayment": 0, which is based on the amount you choose to give to nominators. Validator's cannot be auto-bonded unless it's sure they're online at genesis or else the network stalls
+* Note: New validators are entered every 10 blocks. See them here - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/straightedge/session/session. Initially the only validators listed appeared to be Edgeware-owned because they were auto-bonded. there's no staking/bond transactions associated with them, as one that was bonded did the set keys/validate setting transactions in the reverse order of the documentation (i.e. https://polkascan.io/pre/straightedge/account/5G9UbiviqfuShqjmVqFAUr4BAxWk8KZh4ho9RW2ZoE1rZZnE). All of the validators have "validatorPayment": 0, which is based on the amount you choose to give to nominators. Validator's cannot be auto-bonded unless it's sure they're online at genesis or else the network stalls
 * Check the bond shows up on Polkascan
-* Check bonded amount Testnet -  - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/session/validator
-* Watch the logs and check if you get slashed or not - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/session/validator/8461-12
-* Check slashed amount - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/event/35350-1
+* Check bonded amount Testnet -  - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/straightedge/session/validator
+* Watch the logs and check if you get slashed or not - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/straightedge/session/validator/8461-12
+* Check slashed amount - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/straightedge/event/35350-1
 * Check available Staking commands via CLI `./bin/edge -r edgeware staking list`. View Storage methods for different SRML modules here: https://polkadot.js.org/api/METHODS_STORAGE.html. Note that Edgeware CLI commands wrap around the Substrate interface.
 * Check if listed in Telemetry when running node before disabling Telemetry when run validator https://telemetry.polkadot.io/#list/Edgeware%20Testnet
 * Check if the displayed "Aura Key" shown in the keygen output matches the Telemetry output
-* Check if listed on Polkascan and that stash is bonded - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/session/validator since it should be automatically bonded from genesis if you're in the validator set, and check that your correct session account is shown there too. Click on details next to a validator
-* Check account balance,  - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) e.g. https://polkascan.io/pre/edgeware-testnet/account/5DP33MYJsMJi8FNfKHRMAPoGJ4rvNLt5o7CA4MumJPE1GDVE
+* Check if listed on Polkascan and that stash is bonded - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/straightedge/session/validator since it should be automatically bonded from genesis if you're in the validator set, and check that your correct session account is shown there too. Click on details next to a validator
+* Check account balance,  - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) e.g. https://polkascan.io/pre/straightedge/account/5DP33MYJsMJi8FNfKHRMAPoGJ4rvNLt5o7CA4MumJPE1GDVE
 * Check that you're earning staking rewards when running session keyed validator. See what's shown under "Additional bonded by nominators" or "Commission"
 
 ### Interact with Edgeware Node
@@ -406,8 +411,9 @@ du -hs /root/straightedge-node
   * Enter depending on network for Substrate Address prefix, and then click "Save & Reload"? Get it from "NodeInfo" at https://commonwealth.im/#!/settings
     * Mainnet:
       ```
-      wss://mainnet1.edgewa.re
-      wss://mainnet2.edgewa.re
+      wss://mainnet1.straighted.ge:9944
+      wss://mainnet2.straighted.ge
+      wss://mainnet3.straighted.ge
       wss://testnet1.edgewa.re
       ```
   * Add Custom Edgware Types by going to https://polkadot.js.org/apps/#/settings/developer and replacing `{}` with the contents of this Gist: https://gist.github.com/drewstone/cee02c503107d06badbdc49bea35c526
@@ -431,7 +437,7 @@ du -hs /root/straightedge-node
 * Relevant Substrate interfaces values you'd use to calculate it include, SessionsPerEra from the Staking, EpochDuration from Babe, SlotDuration from Aura
 * Latest metadata from Substrate that's used for the front-end https://github.com/polkadot-js/api/blob/master/packages/types/src/Metadata/v7/static-substrate.json. Shown under "Substrate interfaces" in the API Reference docs https://polkadot.js.org/api/api/#api-selection
 https://substrate.dev/docs/en/overview/glossary#transaction-era
-* Polkascan here  - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/edgeware-testnet/session/session shows the Session ID associated with each Block Number, and then click the "Details" button for a specific Block Number, and the "Details" page will include the associated Era
+* Polkascan here  - Rename for either Mainnet (edgeware) OR Testnet (edgeware-test) https://polkascan.io/pre/straightedge/session/session shows the Session ID associated with each Block Number, and then click the "Details" button for a specific Block Number, and the "Details" page will include the associated Era
 
 ### Consider setting up an IP Failover solution
 
@@ -541,7 +547,7 @@ After=network-online.target
 [Service]
 User=root
 WorkingDirectory=/home/root/edgeware-node
-ExecStart=/root/edgeware-node/target/release/edgeware --chain=edgeware-testnet-v8 --name edge  
+ExecStart=/root/edgeware-node/target/release/edgeware --chain=straightedge --name edge  
 
 Restart=always
 RestartSec=3
